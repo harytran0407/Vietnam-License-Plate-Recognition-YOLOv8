@@ -1,7 +1,7 @@
 # Terminal 1
-cd ParkingSystem && dotnet run
+cd aspnet-api && dotnet run 
 
 # Terminal 2
-python main.py
+cd python-ai && python main.py
 # → [STREAM] Video feed : http://localhost:5001/video_feed
 
