@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bãi Giữ Xe AI</title>
+<style>
+/* ── Reset & tokens ─────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117; --surface:#1a1d2e; --card:#22263a; --border:#2e3250;
+  --green:#00e676; --blue:#448aff; --orange:#ff9100; --red:#ff5252;
+  --yellow:#ffe57f; --text:#e0e0e0; --muted:#78909c; --accent:#7c4dff;
+  --font:'Segoe UI',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+
+/* ── Connection banner ──────────────────────────────────── */
+#conn-banner{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 24px;font-size:.82rem;
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+#conn-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0}
+#conn-dot.ok{background:var(--green)}
+#conn-dot.err{background:var(--red);animation:pulse 1s infinite}
+#conn-dot.checking{background:var(--orange);animation:pulse .6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+#conn-msg{flex:1}
+#conn-url-input{
+  padding:4px 10px;border-radius:5px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:.8rem;width:230px
+}
+#conn-retry-btn{
+  padding:4px 14px;border-radius:5px;border:none;
+  background:var(--accent);color:#fff;cursor:pointer;font-size:.8rem
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:13px 24px;display:flex;align-items:center;justify-content:space-between
+}
+header h1{font-size:1.18rem;color:var(--green);letter-spacing:.5px}
+#clock{font-size:.95rem;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* ── Stat cards ─────────────────────────────────────────── */
+.stats-row{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:14px;padding:22px 24px 8px
+}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:18px 16px
+}
+.stat-card .label{font-size:.73rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.stat-card .value{font-size:1.9rem;font-weight:700;margin-top:5px}
+.c-green .value{color:var(--green)} .c-blue .value{color:var(--blue)}
+.c-orange .value{color:var(--orange)} .c-accent .value{color:var(--accent)}
+
+/* ── Sections ───────────────────────────────────────────── */
+.section{padding:18px 24px}
+.section h2{
+  font-size:.78rem;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.7px;margin-bottom:12px;display:flex;align-items:center;gap:8px
+}
+.section h2 .badge-count{
+  background:var(--accent);color:#fff;border-radius:10px;
+  padding:1px 8px;font-size:.7rem;font-variant-numeric:tabular-nums
+}
+
+/* ── Search bar ─────────────────────────────────────────── */
+.search-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.search-row input{
+  flex:1;min-width:160px;padding:7px 12px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-size:.88rem;outline:none
+}
+.search-row input:focus{border-color:var(--accent)}
+.search-row button{
+  padding:7px 18px;background:var(--accent);color:#fff;
+  border:none;border-radius:6px;cursor:pointer;font-size:.88rem
+}
+.search-row button:hover{opacity:.85}
+
+/* ── Tables ─────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.83rem;min-width:560px}
+th{
+  background:var(--surface);padding:9px 12px;text-align:left;
+  color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);
+  white-space:nowrap
+}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.025)}
+.empty-row td{color:var(--muted);text-align:center;padding:28px}
+
+/* ── Badges ─────────────────────────────────────────────── */
+.badge{
+  display:inline-block;padding:3px 10px;border-radius:11px;
+  font-size:.72rem;font-weight:700;white-space:nowrap
+}
+.badge-parking{background:rgba(0,230,118,.12);color:var(--green);border:1px solid var(--green)}
+.badge-out{background:rgba(68,138,255,.12);color:var(--blue);border:1px solid var(--blue)}
+
+.plate{
+  font-family:'Courier New',monospace;font-weight:700;
+  font-size:.95rem;color:var(--orange);letter-spacing:1px
+}
+.fee{color:var(--green);font-weight:600}
+.conf{color:var(--muted);font-size:.78rem}
+
+/* ── Pagination ─────────────────────────────────────────── */
+.pagination{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap}
+.pagination button{
+  padding:5px 14px;background:var(--card);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);cursor:pointer;font-size:.82rem
+}
+.pagination button:disabled{opacity:.35;cursor:default}
+.pagination button.active{background:var(--accent);border-color:var(--accent)}
+
+/* ── Refresh timer ──────────────────────────────────────── */
+.refresh-hint{font-size:.72rem;color:var(--muted);margin-left:auto}
+
+/* ── Error overlay ──────────────────────────────────────── */
+.api-error{
+  background:rgba(255,82,82,.08);border:1px solid var(--red);
+  border-radius:8px;padding:14px 16px;color:var(--red);
+  font-size:.83rem;margin-bottom:12px;display:none
+}
+.api-error.show{display:block}
+
+/* ── Elapsed tag ────────────────────────────────────────── */
+.elapsed{font-size:.78rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ── Connection banner ───────────────────────────────────────── -->
+<div id="conn-banner">
+  <div id="conn-dot" class="checking"></div>
+  <span id="conn-msg">Đang kết nối tới API…</span>
+  <span style="color:var(--muted);font-size:.75rem;margin-left:8px">API URL:</span>
+  <input id="conn-url-input" type="text" value="http://localhost:5000"/>
+  <button id="conn-retry-btn" onclick="retryConnection()">Kết nối lại</button>
+</div>
+
+<!-- ── Header ─────────────────────────────────────────────────── -->
+<header>
+  <h1>🚗 Hệ thống quản lý bãi giữ xe AI</h1>
+  <span id="clock"></span>
+</header>
+
+<!-- ── Video feed ──────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>
+    Camera realtime
+    <span id="cam-status" style="font-size:.72rem;color:var(--muted);margin-left:6px">đang kết nối…</span>
+  </h2>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+    <div style="flex:1;min-width:300px;position:relative">
+      <img id="cam-feed"
+           src=""
+           alt="Camera feed"
+           style="width:100%;border-radius:8px;border:1px solid var(--border);
+                  background:#111;min-height:200px;display:block"
+           onerror="onCamError()"
+           onload="onCamLoad()"/>
+      <div id="cam-overlay"
+           style="position:absolute;inset:0;display:flex;align-items:center;
+                  justify-content:center;color:var(--muted);font-size:.85rem;
+                  background:rgba(0,0,0,.55);border-radius:8px">
+        Chờ Python AI khởi động…
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;min-width:160px">
+      <button onclick="snapShot()"
+              style="padding:8px 16px;background:var(--accent);color:#fff;
+                     border:none;border-radius:6px;cursor:pointer;font-size:.85rem">
+        📷 Chụp ảnh
+      </button>
+      <div style="font-size:.75rem;color:var(--muted);line-height:1.6">
+        Stream: <code id="stream-url" style="color:var(--yellow)">—</code><br>
+        FPS: <span id="cam-fps">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Stats ──────────────────────────────────────────────────── -->
+<div class="stats-row">
+  <div class="stat-card c-green">
+    <div class="label">Đang gửi xe</div>
+    <div class="value" id="st-active">--</div>
+  </div>
+  <div class="stat-card c-blue">
+    <div class="label">Lượt hôm nay</div>
+    <div class="value" id="st-today">--</div>
+  </div>
+  <div class="stat-card c-orange">
+    <div class="label">Tổng lịch sử</div>
+    <div class="value" id="st-all">--</div>
+  </div>
+  <div class="stat-card c-accent">
+    <div class="label">Doanh thu hôm nay</div>
+    <div class="value" id="st-fee">--</div>
+  </div>
+</div>
+
+<!-- ── Active vehicles ────────────────────────────────────────── -->
+<div class="section">
+  <h2>
+    Xe đang trong bãi
+    <span class="badge-count" id="active-count">0</span>
+  </h2>
+  <div class="api-error" id="active-err"></div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Biển số</th><th>Camera</th><th>Vào lúc</th>
+          <th>Thời gian gửi</th><th>Độ tin cậy</th><th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody id="active-body">
+        <tr class="empty-row"><td colspan="6">Đang tải…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── History ────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>
+    Lịch sử gửi xe
+    <span class="refresh-hint" id="refresh-hint"></span>
+  </h2>
+  <div class="search-row">
+    <input id="search-plate" placeholder="Tìm biển số… (vd: 51F-12345)"
+           onkeydown="if(event.key==='Enter') loadHistory(1)"/>
+    <button onclick="loadHistory(1)">🔍 Tìm</button>
+    <button onclick="document.getElementById('search-plate').value='';loadHistory(1)"
+            style="background:var(--surface);border:1px solid var(--border)">✕ Xoá</button>
+  </div>
+  <div class="api-error" id="history-err"></div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Biển số</th><th>Vào</th><th>Ra</th>
+          <th>Thời gian</th><th>Phí (VND)</th><th>Votes</th><th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+        <tr class="empty-row"><td colspan="8">Đang tải…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════════════════
+// Config
+// ════════════════════════════════════════════════════════════════
+const PAGE_SIZE   = 20;
+const AUTO_RELOAD = 10;   // seconds between auto-refresh
+
+let API_BASE      = localStorage.getItem('parking_api') || 'http://localhost:5000';
+let currentPage   = 1;
+let countdown     = AUTO_RELOAD;
+let connected     = false;
+let refreshTimer  = null;
+
+// Restore saved URL into input
+document.getElementById('conn-url-input').value = API_BASE;
+
+// ════════════════════════════════════════════════════════════════
+// Clock
+// ════════════════════════════════════════════════════════════════
+function updateClock(){
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('vi-VN',{hour12:false});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ════════════════════════════════════════════════════════════════
+// Connection management
+// ════════════════════════════════════════════════════════════════
+function setConnState(state, msg){
+  const dot = document.getElementById('conn-dot');
+  const txt = document.getElementById('conn-msg');
+  dot.className = '';
+  dot.classList.add(state);   // 'ok' | 'err' | 'checking'
+  txt.textContent = msg;
+  connected = (state === 'ok');
+}
+
+async function checkConnection(){
+  const url = document.getElementById('conn-url-input').value.trim().replace(/\/$/,'');
+  API_BASE = url;
+  localStorage.setItem('parking_api', url);
+  setConnState('checking','Đang kiểm tra kết nối…');
+  try{
+    const r = await fetch(`${API_BASE}/health`,{signal:AbortSignal.timeout(4000)});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    setConnState('ok',`✓ Kết nối thành công  |  DB: ${d.db}  |  ${d.time}`);
+    return true;
+  }catch(e){
+    setConnState('err',`✗ Không kết nối được tới ${API_BASE}/health  →  ${e.message}`);
+    return false;
+  }
+}
+
+async function retryConnection(){
+  const ok = await checkConnection();
+  if(ok) refreshAll();
+}
+
+// ════════════════════════════════════════════════════════════════
+// API fetch wrapper with error display
+// ════════════════════════════════════════════════════════════════
+async function apiFetch(path, errElId){
+  const errEl = errElId ? document.getElementById(errElId) : null;
+  try{
+    const r = await fetch(`${API_BASE}${path}`,{signal:AbortSignal.timeout(6000)});
+    if(!r.ok){
+      const body = await r.text().catch(()=>'');
+      throw new Error(`HTTP ${r.status}${body ? ': '+body.slice(0,120) : ''}`);
+    }
+    if(errEl){ errEl.textContent=''; errEl.classList.remove('show'); }
+    return await r.json();
+  }catch(e){
+    if(errEl){
+      errEl.textContent = `⚠ Lỗi API: ${e.message}`;
+      errEl.classList.add('show');
+    }
+    console.warn('API error:', path, e.message);
+    return null;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// Stats
+// ════════════════════════════════════════════════════════════════
+async function loadStats(){
+  const d = await apiFetch('/api/parking/stats');
+  if(!d) return;
+  document.getElementById('st-active').textContent = d.currentlyParked  ?? '--';
+  document.getElementById('st-today').textContent  = d.totalToday       ?? '--';
+  document.getElementById('st-all').textContent    = d.totalAllTime     ?? '--';
+  document.getElementById('st-fee').textContent    =
+    d.totalFeeToday != null
+      ? new Intl.NumberFormat('vi-VN').format(d.totalFeeToday) + ' đ'
+      : '--';
+}
+
+// ════════════════════════════════════════════════════════════════
+// Active vehicles
+// ════════════════════════════════════════════════════════════════
+async function loadActive(){
+  const rows = await apiFetch('/api/parking/active','active-err');
+  const tbody = document.getElementById('active-body');
+  const countEl = document.getElementById('active-count');
+  if(!rows){ tbody.innerHTML = emptyRow(6,'Không lấy được dữ liệu'); return; }
+  countEl.textContent = rows.length;
+  if(!rows.length){
+    tbody.innerHTML = emptyRow(6,'Không có xe nào đang gửi');
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const inTime = new Date(r.checkInTime);
+    return `<tr>
+      <td><span class="plate">${r.licensePlate}</span></td>
+      <td>${r.cameraId}</td>
+      <td>${fmtDt(inTime)}</td>
+      <td><span class="elapsed">${elapsed(inTime)}</span></td>
+      <td><span class="conf">${r.confidence>0?(r.confidence*100).toFixed(0)+'%':'-'}</span></td>
+      <td><span class="badge badge-parking">ĐANG GỬI</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════
+// History
+// ════════════════════════════════════════════════════════════════
+async function loadHistory(page=1){
+  currentPage = page;
+  const plate = document.getElementById('search-plate').value.trim();
+  let qs = `?page=${page}&pageSize=${PAGE_SIZE}`;
+  if(plate) qs += `&plate=${encodeURIComponent(plate)}`;
+
+  const rows = await apiFetch(`/api/parking/history${qs}`,'history-err');
+  const tbody = document.getElementById('history-body');
+  if(!rows){ tbody.innerHTML = emptyRow(8,'Không lấy được dữ liệu'); return; }
+  if(!rows.length){
+    tbody.innerHTML = emptyRow(8,'Không có dữ liệu');
+    renderPagination(0);
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const inTime  = new Date(r.checkInTime);
+    const outTime = r.checkOutTime ? new Date(r.checkOutTime) : null;
+    const mins    = r.totalMinutes || 0;
+    const fee     = r.status==='CHECKED_OUT' ? calcFee(r.totalHours) : null;
+    const badge   = r.status==='PARKING'
+      ? '<span class="badge badge-parking">ĐANG GỬI</span>'
+      : '<span class="badge badge-out">ĐÃ RA</span>';
+    return `<tr>
+      <td style="font-size:.72rem;color:var(--muted)">${r.id}</td>
+      <td><span class="plate">${r.licensePlate}</span></td>
+      <td>${fmtDt(inTime)}</td>
+      <td>${outTime ? fmtDt(outTime) : '<span style="color:var(--muted)">—</span>'}</td>
+      <td>${mins>0 ? `${Math.floor(mins)}p ${Math.round((mins%1)*60)}s` : '—'}</td>
+      <td class="fee">${fee!=null ? new Intl.NumberFormat('vi-VN').format(fee)+' đ' : '—'}</td>
+      <td style="color:var(--muted);font-size:.78rem">${r.votes||'—'}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+  renderPagination(rows.length);
+}
+
+function renderPagination(rowCount){
+  document.getElementById('pagination').innerHTML = `
+    <button onclick="loadHistory(${currentPage-1})" ${currentPage<=1?'disabled':''}>← Trước</button>
+    <button class="active" disabled>Trang ${currentPage}</button>
+    <button onclick="loadHistory(${currentPage+1})" ${rowCount<PAGE_SIZE?'disabled':''}>Tiếp →</button>
+  `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// Helpers
+// ════════════════════════════════════════════════════════════════
+function fmtDt(d){
+  return d.toLocaleString('vi-VN',{
+    day:'2-digit',month:'2-digit',year:'numeric',
+    hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
+  });
+}
+function elapsed(from){
+  const s = Math.floor((Date.now()-from)/1000);
+  if(s<60) return `${s}s`;
+  if(s<3600) return `${Math.floor(s/60)}p ${s%60}s`;
+  return `${Math.floor(s/3600)}g ${Math.floor((s%3600)/60)}p`;
+}
+function calcFee(hours){
+  if(!hours||hours<=0) return 0;
+  return 5000 + Math.max(0,Math.ceil(hours)-1)*3000;
+}
+function emptyRow(cols, msg){
+  return `<tr class="empty-row"><td colspan="${cols}">${msg}</td></tr>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// Auto-refresh
+// ════════════════════════════════════════════════════════════════
+async function refreshAll(){
+  if(!connected) return;
+  await Promise.all([loadStats(), loadActive(), loadHistory(currentPage)]);
+}
+
+function startCountdown(){
+  clearInterval(refreshTimer);
+  countdown = AUTO_RELOAD;
+  refreshTimer = setInterval(()=>{
+    countdown--;
+    const hint = document.getElementById('refresh-hint');
+    if(hint) hint.textContent = `(tự cập nhật sau ${countdown}s)`;
+    if(countdown<=0){
+      countdown = AUTO_RELOAD;
+      refreshAll();
+    }
+  },1000);
+}
+
+// ════════════════════════════════════════════════════════════════
+// Camera stream
+// ════════════════════════════════════════════════════════════════
+const STREAM_PORT = 5001;
+let camOk = false;
+let fpsCount = 0;
+let fpsLast = Date.now();
+
+function getCamStreamUrl(){
+  // Extract host from the API_BASE (same host, different port)
+  try{
+    const u = new URL(API_BASE);
+    return `http://${u.hostname}:${STREAM_PORT}/video_feed`;
+  }catch{
+    return `http://localhost:${STREAM_PORT}/video_feed`;
+  }
+}
+
+function startCamStream(){
+  const streamUrl = getCamStreamUrl();
+  document.getElementById('stream-url').textContent = streamUrl;
+  document.getElementById('cam-feed').src = streamUrl;
+}
+
+function onCamLoad(){
+  camOk = true;
+  document.getElementById('cam-overlay').style.display = 'none';
+  document.getElementById('cam-status').textContent    = '● live';
+  document.getElementById('cam-status').style.color   = 'var(--green)';
+  // FPS counter
+  fpsCount++;
+  const now = Date.now();
+  if(now - fpsLast >= 1000){
+    document.getElementById('cam-fps').textContent = fpsCount + ' fps';
+    fpsCount = 0;
+    fpsLast  = now;
+  }
+}
+
+function onCamError(){
+  camOk = false;
+  const overlay = document.getElementById('cam-overlay');
+  overlay.style.display = 'flex';
+  overlay.textContent   = '⚠ Không nhận được stream — chạy python main.py chưa?';
+  document.getElementById('cam-status').textContent  = '● offline';
+  document.getElementById('cam-status').style.color = 'var(--red)';
+  // Retry after 3 s
+  setTimeout(startCamStream, 3000);
+}
+
+function snapShot(){
+  try{
+    const u   = new URL(API_BASE);
+    const url = `http://${u.hostname}:${STREAM_PORT}/snapshot`;
+    const a   = document.createElement('a');
+    a.href    = url;
+    a.target  = '_blank';
+    a.download = `snapshot_${Date.now()}.jpg`;
+    a.click();
+  }catch(e){ alert('Lỗi snapshot: '+e.message); }
+}
+
+// Start stream after connection check succeeds
+const _origRetry = retryConnection;
+retryConnection = async function(){
+  await _origRetry();
+  startCamStream();
+};
+
+// ════════════════════════════════════════════════════════════════
+// Boot sequence
+// ════════════════════════════════════════════════════════════════
+(async()=>{
+  const ok = await checkConnection();
+  if(ok){
+    await refreshAll();
+    startCountdown();
+  }
+  startCamStream();   // attempt stream regardless (Python may start later)
+})();
+</script>
+</body>
+</html>

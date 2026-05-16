@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ParkingSystem</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Pomelo is the standard MySQL provider for EF Core -->
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql"        Version="8.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools"     Version="8.*" PrivateAssets="all" />
+    <PackageReference Include="Swashbuckle.AspNetCore"                  Version="6.*" />
+  </ItemGroup>
+
+</Project>
